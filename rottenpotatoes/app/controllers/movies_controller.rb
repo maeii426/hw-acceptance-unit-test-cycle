@@ -1,7 +1,7 @@
 class MoviesController < ApplicationController
   
   def movie_params
-    params.require(:movie).permit(:title, :rating, :description, :release_date)
+    params.require(:movie).permit(:title, :rating, :description, :release_date, :director)
   end
 
   def show
@@ -20,6 +20,7 @@ class MoviesController < ApplicationController
     end
     @all_ratings = Movie.all_ratings
     @selected_ratings = params[:ratings] || session[:ratings] || {}
+    @selected_director = params[:dir]
     
     if @selected_ratings == {}
       @selected_ratings = Hash[@all_ratings.map {|rating| [rating, rating]}]
@@ -28,9 +29,18 @@ class MoviesController < ApplicationController
     if params[:sort] != session[:sort] or params[:ratings] != session[:ratings]
       session[:sort] = sort
       session[:ratings] = @selected_ratings
-      redirect_to :sort => sort, :ratings => @selected_ratings and return
+      redirect_to :sort => sort, :ratings => @selected_ratings, :dir => @selected_director, :dir_active => params[:dir_active], :hist => params[:hist] and return
     end
-    @movies = Movie.where(rating: @selected_ratings.keys).order(ordering)
+    
+    if params[:dir_active] && (@selected_director == nil || @selected_director == "")
+      flash.now[:notice] = "'#{params[:hist]}' has no director info"
+    end
+    
+    if @selected_director == nil || @selected_director == ""
+      @movies = Movie.where(rating: @selected_ratings.keys).order(ordering)
+    else
+      @movies = Movie.where(rating: @selected_ratings.keys, director: @selected_director).order(ordering)
+    end
   end
 
   def new

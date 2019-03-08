@@ -41,12 +41,16 @@ When /^(.*) within (.*[^:]):$/ do |step, parent, table_or_string|
   with_scope(parent) { When "#{step}:", table_or_string }
 end
 
-Given /^(?:|I )am on (.+)$/ do |page_name|
-  visit path_to(page_name)
+Given /^(?:|I )am on the details page for "([^"]*)"$/ do |movie_name|
+  visit ('/movies/' + Movie.where(title: movie_name).first.id.to_s)
 end
 
-When /^(?:|I )go to (.+)$/ do |page_name|
-  visit path_to(page_name)
+When /^(?:|I )am on the create page$/ do
+  visit ('/movies/new')
+end
+
+When /^(?:|I )go to the edit page for "([^"]*)"$/ do |movie_name|
+  visit ('/movies/' + Movie.where(title: movie_name).first.id.to_s + '/edit')
 end
 
 When /^(?:|I )press "([^"]*)"$/ do |button|
@@ -150,6 +154,31 @@ Then /^the "([^"]*)" field(?: within (.*))? should contain "([^"]*)"$/ do |field
   end
 end
 
+Then /^the "([^"]*)" of field(?: within (.*))? should be "([^"]*)"$/ do |field, parent, value|
+  with_scope(parent) do
+    field = find_field(field)
+    field_value = (field.tag_name == 'textarea') ? field.text : field.value
+    if field_value.respond_to? :should
+      field_value.should =~ /#{value}/
+    else
+      assert_match(/#{value}/, field_value)
+    end
+  end
+end
+
+Then /^the director of "([^"]*)" should be "([^"]*)"$/ do |parent, value|
+  movie = Movie.where(title: parent)
+  movie.first.director.should =~ /#{value}/
+end
+
+And /^(?:|I ) should see "([^"]*)"$/ do |movie_name|
+  if page.respond_to? :should
+    page.should have_content(text)
+  else
+    assert page.has_content?(text)
+  end
+end
+
 Then /^the "([^"]*)" field(?: within (.*))? should not contain "([^"]*)"$/ do |field, parent, value|
   with_scope(parent) do
     field = find_field(field)
@@ -227,13 +256,26 @@ Then /^the "([^"]*)" checkbox(?: within (.*))? should not be checked$/ do |label
   end
 end
  
-Then /^(?:|I )should be on (.+)$/ do |page_name|
+Then /^(?:|I )should be on the Similar Movies page for "([^"]*)"$/ do |movie_name|
   current_path = URI.parse(current_url).path
   if current_path.respond_to? :should
-    current_path.should == path_to(page_name)
+    current_path.should == '/movies'
   else
-    assert_equal path_to(page_name), current_path
+    assert_equal '/movies', current_path
   end
+end
+
+Then /^(?:|I )should be on the home page$/ do
+  current_path = URI.parse(current_url).path
+  if current_path.respond_to? :should
+    current_path.should == '/movies'
+  else
+    assert_equal '/movies', current_path
+  end
+end
+
+And /^(?:|I )am on the RottenPotatoes home page$/ do
+  visit '/movies'
 end
 
 Then /^(?:|I )should have the following query string:$/ do |expected_pairs|
